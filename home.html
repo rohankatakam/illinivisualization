@@ -1,0 +1,258 @@
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>UIUC Zipcode Map</title>
+    <!-- D3 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
+    <script src="https://d3js.org/d3-color.v1.min.js"></script>
+    <script src="https://d3js.org/d3-interpolate.v1.min.js"></script>
+    <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+    <script src="https://d3js.org/d3.v4.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/queue-async/1.0.7/queue.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.25.6/d3-legend.js"></script>
+
+    <!-- TopoJSON -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/1.6.19/topojson.min.js"></script>
+
+    <!-- Fisheye -->
+    <script src="fisheye.js"></script>
+    
+
+    <!-- Bootstrap -->
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js"></script>
+    <link href="http://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet" type="text/css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+<style>
+    body {
+        padding: 0;
+        margin: 0;
+        background: whitesmoke;
+    }
+    
+    .tooltip ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+  background-color: grey;
+  border-radius: 20px;
+  font-family: Sans-serif;
+  padding: 10px;
+  color: white;
+}
+
+#number {
+  font-weight: bold;
+  color: white;
+  font-size: 120%;
+}
+
+.tooltip {
+  max-width: 200px;
+  border: 10px solid dashed;
+  border-radius: 20px;
+}
+
+.svg-container {
+    display: inline-block;
+    position: relative;
+    width: 100%;
+    vertical-align: top;
+    padding-top: 720px;
+}
+.usmap {
+    display: inline-block;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.jumbotron {
+      background-color: #3f51b5;
+      border-color: #0c1e82;
+      color: #ecf0f1;
+      padding-top: 30px;
+      padding-bottom: 20px;
+    }
+
+    .list-group {
+      background-color: transparent;
+      max-height: 300px;
+      margin-bottom: 10px;
+      overflow-y:auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .list-group-item {
+      background-color: transparent;
+    }
+
+    #legend .row {
+      text-align: center;
+    }
+
+    #legend .row .badge {
+      width: 50px;
+      height: 60%;
+    }
+  
+
+    #legend {
+      position: absolute;
+      z-index: 9;
+    }
+
+    #to5 {
+      background-color: #f5b2a3;
+      color: #f5b2a3;
+    }
+
+    #to25 {
+      background-color: #f08b75;
+      color: #f08b75;
+    }
+
+    #to75 {
+      background-color: #ec6546;
+      color: #ec6546;
+    }
+
+    #to200 {
+      background-color: #e84a27;
+      color: #e84a27;
+    }
+
+    #to500 {
+      background-color: #d03816;
+      color: #d03816;
+    }
+
+    #to1000 {
+      background-color: #a22b11;
+      color: #a22b11;
+    }
+
+    #to2000 {
+      background-color: #731f0c;
+      color: #731f0c;
+    }
+
+    #grab {
+      cursor: move;
+      z-index: 10;
+    }
+</style>
+</head>
+<body>
+    <div class="container">
+        <br>
+        <div class="jumbotron">
+            <h1 class="display-4">Illini Across the United States</h1>
+            <p class="lead">A Data Driven Discovery by Rohan Katakam</p>
+          </div>
+        <div class="tooltip">
+            <ul>
+            <li class="location"><span id="city">Villa</span>, <span id="state">IL</span> (<span id="zipcode">60010</span>)</li>
+            <li id="number">15</li>
+            </ul>
+        </div>
+
+        <div class="container" id="vis-container">
+            <h3>Introduction</h3>
+            <p>
+              This is a data visualization mapping where students attending University of Illinois Urbana-Champaign are from around the United States.
+              Choose a year you would like to see information for. You can drag and drop the legend as you please for optimal map viewing. See how many people from your home town are attending UIUC! 
+            </p>
+            
+            <div class="row">
+              <div class="col-md-6" style="margin-bottom: 25px;text-align: left; height:225px">
+                <div class="container" id="legend">
+                  <span id="grab"></span>
+
+                  <div class="row">
+                    <h6><span class="badge badge-pill badge-primary"  id="to5" onclick=""> </span> 0 to 5</h6>
+                  </div>
+                  <div class="row">
+                    <h6><span class="badge badge-pill badge-primary"  id="to25"> </span> 5 to 25</h6>
+                  </div>
+                  <div class="row">
+                    <h6><span class="badge badge-pill badge-primary"  id="to75"> </span> 25 to 75</h6>
+                  </div>
+                  <div class="row">
+                    <h6><span class="badge badge-pill badge-primary"  id="to200"> </span> 75 to 200</h6>
+                  </div>
+                  <div class="row">
+                    <h6><span class="badge badge-pill badge-primary"  id="to500"> </span> 200 to 500</h6>
+                  </div>
+                  <div class="row">
+                    <h6><span class="badge badge-pill badge-primary"  id="to1000"> </span> 500 to 1000</h6>
+                  </div>
+                  <div class="row">
+                    <h6><span class="badge badge-pill badge-primary"  id="to2000"> </span> 1000 to 2000</h6>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6" style="margin-bottom: 15px;">
+                <h5>Choose Year</h5>
+                <div class="input-group mb-3" style="width:50%">
+                  <div class="input-group-prepend">
+                    <label class="input-group-text" for="inputGroupSelect01">Fall</label>
+                  </div>
+                  <select class="custom-select" id="selectYear">
+                    <option value="2019" selected>2019</option>
+                    <option value="2018">2018</option>
+                    <option value="2017">2017</option>
+                    <option value="2016">2016</option>
+                    <option value="2015">2015</option>
+                    <option value="2014">2014</option>
+                    <option value="2013">2013</option>
+                    <option value="2009">2009</option>
+                    <option value="2008">2008</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+    
+            <hr id="pre-chart">
+    
+            <div id="chart" style="margin: 0px auto; text-align: center;">
+
+              <div class="row">
+                <div class="svg-container">
+                  <svg class="usmap" id="map" preserveAspectRatio= "xMinYMin meet"></svg>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-6">
+                  <h4 style="text-align: left;" id="instate-header">In-state</h4>
+                  <ul class="list-group list-group-flush" id="instate"></ul>
+                </div>
+                <div class="col-md-6">
+                  <h4 style="text-align: left;" id="outofstate-header">Out-of-state</h4>
+                  <ul class="list-group list-group-flush" id="outofstate"></ul>
+                </div>
+              </div>
+              <br>
+              <div class="row">
+                <div class="col-sm">
+                <h4 style="text-align: left;">Trends (2009-2019)</h4>
+                <ul class="list-group list-group-flush" id="trends" style="width:100%"></ul>
+              </div>
+              </div>
+              <br>
+              
+            </div>
+          </div>
+
+          <div class="jumbotron">
+            <h6>Love it? Check out <a href="https://www.linkedin.com/in/rohankatakam/" style="color:white;" target="_blank"><u>Rohan</u></a>'s other work!</h6>
+          </div>
+        
+    </div>
+  <script src="zip-map.js"></script>
+</body>
+</html>
